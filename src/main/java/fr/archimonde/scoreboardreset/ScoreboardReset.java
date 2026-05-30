@@ -16,11 +16,6 @@ public class ScoreboardReset extends JavaPlugin {
     public void onEnable() {
         protocolManager = ProtocolLibrary.getProtocolManager();
 
-        // Bloque tous les packets scoreboard envoyés AU client
-        // PacketType.Play.Server.SCOREBOARD_OBJECTIVE  → création/suppression d'objectif
-        // PacketType.Play.Server.SCOREBOARD_SCORE      → mise à jour des lignes
-        // PacketType.Play.Server.SCOREBOARD_DISPLAY_OBJECTIVE → affichage dans un slot
-
         protocolManager.addPacketListener(new PacketAdapter(
                 this,
                 ListenerPriority.HIGHEST,
@@ -30,8 +25,6 @@ public class ScoreboardReset extends JavaPlugin {
         ) {
             @Override
             public void onPacketSending(PacketEvent event) {
-                // Annule le packet → TheLab reçoit rien de TAB/BungeeCord
-                // et peut envoyer son propre scoreboard sans interférence
                 event.setCancelled(true);
             }
         });
