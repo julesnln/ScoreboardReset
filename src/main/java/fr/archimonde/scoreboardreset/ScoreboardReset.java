@@ -10,14 +10,11 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Scoreboard;
 
 public class ScoreboardReset extends JavaPlugin implements Listener, CommandExecutor {
 
-    // Délai en ticks avant de reset le scoreboard (20 ticks = 1 seconde)
-    // Assez long pour laisser TAB envoyer son reset, mais avant que TheLab envoie son scoreboard
-    private static final long RESET_DELAY_TICKS = 5L;
+    private static final long RESET_DELAY_TICKS = 0L;
 
     @Override
     public void onEnable() {
@@ -29,8 +26,6 @@ public class ScoreboardReset extends JavaPlugin implements Listener, CommandExec
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-
-        // On schedule le reset après le délai configuré
         Bukkit.getScheduler().runTaskLater(this, () -> {
             if (player.isOnline()) {
                 resetSidebar(player);
@@ -38,26 +33,11 @@ public class ScoreboardReset extends JavaPlugin implements Listener, CommandExec
         }, RESET_DELAY_TICKS);
     }
 
-    /**
-     * Supprime l'objectif affiché dans le slot SIDEBAR du joueur.
-     * Cela force le plugin du mini-jeu à re-créer et renvoyer son scoreboard complet.
-     */
     private void resetSidebar(Player player) {
-        Scoreboard scoreboard = player.getScoreboard();
-
-        if (scoreboard == null) {
-            scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
-        }
-
-        // Supprime l'objectif du slot sidebar s'il y en a un
-        var objective = scoreboard.getObjective(DisplaySlot.SIDEBAR);
-        if (objective != null) {
-            objective.unregister();
-            getLogger().fine("Sidebar reset pour " + player.getName());
-        }
-
-        // Assigne le scoreboard principal propre au joueur
-        player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+        // Assigner un scoreboard tout neuf et vide au joueur
+        // Sans unregister, sans détruire l'objectif existant
+        Scoreboard fresh = Bukkit.getScoreboardManager().getNewScoreboard();
+        player.setScoreboard(fresh);
     }
 
     @Override
@@ -66,12 +46,10 @@ public class ScoreboardReset extends JavaPlugin implements Listener, CommandExec
             sender.sendMessage("§cCommande réservée aux joueurs.");
             return true;
         }
-
         if (!player.hasPermission("scoreboardreset.use")) {
             player.sendMessage("§cVous n'avez pas la permission.");
             return true;
         }
-
         resetSidebar(player);
         player.sendMessage("§aScoreboard sidebar reset !");
         return true;
