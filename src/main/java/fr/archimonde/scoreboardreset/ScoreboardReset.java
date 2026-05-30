@@ -1,57 +1,48 @@
 package fr.archimonde.scoreboardreset;
 
-import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.ListenerPriority;
+import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scoreboard.Scoreboard;
 
-public class ScoreboardReset extends JavaPlugin implements Listener, CommandExecutor {
+public class ScoreboardReset extends JavaPlugin {
 
-    private static final long RESET_DELAY_TICKS = 0L;
+    private ProtocolManager protocolManager;
 
     @Override
     public void onEnable() {
-        Bukkit.getPluginManager().registerEvents(this, this);
-        getCommand("sbreset").setExecutor(this);
-        getLogger().info("ScoreboardReset actif - délai: " + RESET_DELAY_TICKS + " ticks");
-    }
+        protocolManager = ProtocolLibrary.getProtocolManager();
 
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        Bukkit.getScheduler().runTaskLater(this, () -> {
-            if (player.isOnline()) {
-                resetSidebar(player);
+        // Bloque tous les packets scoreboard envoyés AU client
+        // PacketType.Play.Server.SCOREBOARD_OBJECTIVE  → création/suppression d'objectif
+        // PacketType.Play.Server.SCOREBOARD_SCORE      → mise à jour des lignes
+        // PacketType.Play.Server.SCOREBOARD_DISPLAY_OBJECTIVE → affichage dans un slot
+
+        protocolManager.addPacketListener(new PacketAdapter(
+                this,
+                ListenerPriority.HIGHEST,
+                PacketType.Play.Server.SCOREBOARD_OBJECTIVE,
+                PacketType.Play.Server.SCOREBOARD_SCORE,
+                PacketType.Play.Server.SCOREBOARD_DISPLAY_OBJECTIVE
+        ) {
+            @Override
+            public void onPacketSending(PacketEvent event) {
+                // Annule le packet → TheLab reçoit rien de TAB/BungeeCord
+                // et peut envoyer son propre scoreboard sans interférence
+                event.setCancelled(true);
             }
-        }, RESET_DELAY_TICKS);
-    }
+        });
 
-    private void resetSidebar(Player player) {
-        // Assigner un scoreboard tout neuf et vide au joueur
-        // Sans unregister, sans détruire l'objectif existant
-        Scoreboard fresh = Bukkit.getScoreboardManager().getNewScoreboard();
-        player.setScoreboard(fresh);
+        getLogger().info("ScoreboardReset actif - packets scoreboard bloqués via ProtocolLib");
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cCommande réservée aux joueurs.");
-            return true;
+    public void onDisable() {
+        if (protocolManager != null) {
+            protocolManager.removePacketListeners(this);
         }
-        if (!player.hasPermission("scoreboardreset.use")) {
-            player.sendMessage("§cVous n'avez pas la permission.");
-            return true;
-        }
-        resetSidebar(player);
-        player.sendMessage("§aScoreboard sidebar reset !");
-        return true;
     }
 }
