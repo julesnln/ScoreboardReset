@@ -1,12 +1,9 @@
 name: ScoreboardReset
-version: 1.0
+version: 2.0
 main: fr.archimonde.scoreboardreset.ScoreboardReset
 api-version: 1.19
 author: Archimonde
-description: Reset le scoreboard sidebar au join pour éviter les conflits BungeeCord
-
-commands:
-  sbreset:
-    description: Reset manuellement le scoreboard sidebar
-    usage: /sbreset
-    permission: scoreboardreset.use
+description: Bloque les packets scoreboard de TAB/BungeeCord pour laisser TheLab gérer son propre scoreboard
+depend:
+  - ProtocolLib
+ 
